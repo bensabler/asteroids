@@ -10,6 +10,8 @@ import (
 const (
 	rotationPerSecond = math.Pi
 	maxAcceleration   = 8.0
+	ScreenWidth       = 1280
+	ScreenHeight      = 720
 )
 
 var curAcceleration float64
@@ -25,9 +27,20 @@ type Player struct {
 func NewPLayer(game *Game) *Player {
 	sprite := assets.PlayerSprite
 
+	// Center player on screen.
+	bounds := sprite.Bounds()
+	halfWidth := float64(bounds.Dx() / 2)
+	halfHeight := float64(bounds.Dy() / 2)
+
+	pos := Vector{
+		X: (ScreenWidth / 2) - halfWidth,
+		Y: (ScreenHeight / 2) - halfHeight,
+	}
+
 	p := &Player{
-		sprite: sprite,
-		game:   game,
+		sprite:   sprite,
+		game:     game,
+		position: pos,
 	}
 
 	return p
@@ -73,6 +86,8 @@ func (p *Player) Update() {
 
 func (p *Player) accelerate() {
 	if ebiten.IsKeyPressed(ebiten.KeyUp) {
+		p.keepOnScreen()
+
 		if curAcceleration < maxAcceleration {
 			curAcceleration = p.playerVelocity + 4
 		}
@@ -90,5 +105,24 @@ func (p *Player) accelerate() {
 		// Move the player on the screen.
 		p.position.X += dx
 		p.position.Y += dy
+	}
+}
+
+func (p *Player) keepOnScreen() {
+
+	if p.position.X >= float64(ScreenWidth) {
+		p.position.X = 0
+	}
+
+	if p.position.X < 0 {
+		p.position.X = ScreenWidth
+	}
+
+	if p.position.Y >= float64(ScreenHeight) {
+		p.position.Y = 0
+	}
+
+	if p.position.Y < 0 {
+		p.position.Y = ScreenHeight
 	}
 }
