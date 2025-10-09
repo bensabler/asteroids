@@ -8,7 +8,7 @@ type GameScene struct {
 
 func NewGameScene() *GameScene {
 	g := &GameScene{}
-	g.player = NewPLayer(g)
+	g.player = NewPlayer(g)
 
 	return g
 }
