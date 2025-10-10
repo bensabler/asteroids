@@ -17,6 +17,7 @@ const (
 	meteorSpeedUpTime    = 1000 * time.Millisecond
 	cleanUpExplosionTime = 200 * time.Millisecond
 	baseBeatWaitTime     = 1600
+	numberOfStars        = 1000
 )
 
 type GameScene struct {
@@ -48,6 +49,7 @@ type GameScene struct {
 	beatTimer            *Timer
 	beatWaitTime         int
 	playBeatOne          bool
+	stars                []*Star
 }
 
 func NewGameScene() *GameScene {
@@ -69,6 +71,7 @@ func NewGameScene() *GameScene {
 	}
 	g.player = NewPlayer(g)
 	g.space.Add(g.player.playerObj)
+	g.stars = GenerateStars(numberOfStars)
 
 	g.explosionFrames = assets.Explosion
 
@@ -152,6 +155,11 @@ func (g *GameScene) Update(state *State) error {
 }
 
 func (g *GameScene) Draw(screen *ebiten.Image) {
+	// Draw stars
+	for _, star := range g.stars {
+		star.Draw(screen)
+	}
+
 	g.player.Draw(screen)
 
 	if g.exhaust != nil {
@@ -312,6 +320,7 @@ func (g *GameScene) Reset() {
 	g.exhaust = nil
 	g.space.RemoveAll()
 	g.space.Add(g.player.playerObj)
+	g.stars = GenerateStars(numberOfStars)
 }
 
 func (g *GameScene) beatSound() {
