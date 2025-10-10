@@ -37,6 +37,7 @@ type GameScene struct {
 	playerIsDead         bool
 	audioContext         *audio.Context
 	thrustPlayer         *audio.Player
+	exhaust              *Exhaust
 }
 
 func NewGameScene() *GameScene {
@@ -73,6 +74,8 @@ func NewGameScene() *GameScene {
 func (g *GameScene) Update(state *State) error {
 	g.player.Update()
 
+	g.updateExhaust()
+
 	g.isPlayerDying()
 
 	g.isPlayerDead(state)
@@ -100,6 +103,10 @@ func (g *GameScene) Update(state *State) error {
 
 func (g *GameScene) Draw(screen *ebiten.Image) {
 	g.player.Draw(screen)
+
+	if g.exhaust != nil {
+		g.exhaust.Draw(screen)
+	}
 
 	// Draw the meteors
 	for _, meteor := range g.meteors {
@@ -214,7 +221,29 @@ func (g *GameScene) isPlayerDead(state *State) {
 	if g.player.isDead {
 		g.player.livesRemaning--
 		if g.player.livesRemaning == 0 {
-			state.SceneManager.GoToScene(NewGameScene())
+			g.Reset()
+			state.SceneManager.GoToScene(g)
 		}
 	}
+}
+
+func (g *GameScene) updateExhaust() {
+	if g.exhaust != nil {
+		g.exhaust.Update()
+	}
+}
+
+func (g *GameScene) Reset() {
+	g.player = NewPlayer(g)
+	g.meteors = make(map[int]*Meteor)
+	g.meteorCount = 0
+	g.lasers = make(map[int]*Laser)
+	g.score = 0
+	g.meteorSpawnTimer.Reset()
+	g.baseVelocity = baseMeteorVelocity
+	g.velocityTimer.Reset()
+	g.playerIsDead = false
+	g.exhaust = nil
+	g.space.RemoveAll()
+	g.space.Add(g.player.playerObj)
 }
