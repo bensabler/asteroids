@@ -120,6 +120,10 @@ func (p *Player) Update() {
 
 	p.isDoneAccelerating()
 
+	p.reverse()
+
+	p.isDoneReversing()
+
 	p.updateExhaustSprite()
 
 	p.playerObj.SetPosition(p.position.X, p.position.Y)
@@ -216,7 +220,7 @@ func (p *Player) isDoneAccelerating() {
 }
 
 func (p *Player) updateExhaustSprite() {
-	if !ebiten.IsKeyPressed(ebiten.KeyUp) && p.game.exhaust != nil {
+	if !ebiten.IsKeyPressed(ebiten.KeyUp) && !ebiten.IsKeyPressed(ebiten.KeyDown) && p.game.exhaust != nil {
 		p.game.exhaust = nil
 	}
 }
@@ -241,5 +245,43 @@ func (p *Player) keepOnScreen() {
 	if p.position.Y < 0 {
 		p.position.Y = ScreenHeight
 		p.playerObj.SetPosition(p.position.X, ScreenHeight)
+	}
+}
+
+func (p *Player) reverse() {
+	if ebiten.IsKeyPressed(ebiten.KeyDown) {
+		p.keepOnScreen()
+
+		dx := math.Sin(p.rotation) * -3
+		dy := math.Cos(p.rotation) * 3
+
+		bounds := p.sprite.Bounds()
+		halfWidth := float64(bounds.Dx() / 2)
+		halfHeight := float64(bounds.Dy() / 2)
+
+		spawnPosition := Vector{
+			p.position.X + halfWidth + math.Sin(p.rotation)*-exhaustSpawnOffset,
+			p.position.Y + halfHeight + math.Cos(p.rotation)*exhaustSpawnOffset,
+		}
+
+		p.game.exhaust = NewExhaust(spawnPosition, p.rotation+180.0*math.Pi/180.0)
+
+		p.position.X += dx
+		p.position.Y += dy
+
+		p.playerObj.SetPosition(p.position.X, p.position.Y)
+
+		if !p.game.thrustPlayer.IsPlaying() {
+			_ = p.game.thrustPlayer.Rewind()
+			p.game.thrustPlayer.Play()
+		}
+	}
+}
+
+func (p *Player) isDoneReversing() {
+	if inpututil.IsKeyJustReleased(ebiten.KeyDown) {
+		if p.game.thrustPlayer.IsPlaying() {
+			p.game.thrustPlayer.Pause()
+		}
 	}
 }
