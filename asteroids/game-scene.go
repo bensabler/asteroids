@@ -2,46 +2,59 @@ package asteroids
 
 import (
 	"fmt"
+	"math/rand"
 	"time"
 
+	"github.com/bensabler/asteroids/assets"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/solarlune/resolv"
 )
 
 const (
-	baseMeteorVelocity  = 0.25
-	meteorSpawnTime     = 100 * time.Millisecond
-	meteorSpeedUpAmount = 0.1
-	meteorSpeedUpTime   = 1000 * time.Millisecond
+	baseMeteorVelocity   = 0.25
+	meteorSpawnTime      = 100 * time.Millisecond
+	meteorSpeedUpAmount  = 0.1
+	meteorSpeedUpTime    = 1000 * time.Millisecond
+	cleanUpExplosionTime = 200 * time.Millisecond
 )
 
 type GameScene struct {
-	player           *Player
-	baseVelocity     float64
-	meteorCount      int
-	meteorSpawnTimer *Timer
-	meteors          map[int]*Meteor
-	meteorsForLevel  int
-	velocityTimer    *Timer
-	space            *resolv.Space
-	lasers           map[int]*Laser
-	laserCount       int
+	player               *Player
+	baseVelocity         float64
+	meteorCount          int
+	meteorSpawnTimer     *Timer
+	meteors              map[int]*Meteor
+	meteorsForLevel      int
+	velocityTimer        *Timer
+	space                *resolv.Space
+	lasers               map[int]*Laser
+	laserCount           int
+	score                int
+	explosionSmallSprite *ebiten.Image
+	explosionSprite      *ebiten.Image
+	explosionFrames      []*ebiten.Image
+	cleanUpTimer         *Timer
 }
 
 func NewGameScene() *GameScene {
 	g := &GameScene{
-		meteorSpawnTimer: NewTimer(meteorSpawnTime),
-		baseVelocity:     baseMeteorVelocity,
-		velocityTimer:    NewTimer(meteorSpeedUpTime),
-		meteors:          make(map[int]*Meteor),
-		meteorCount:      0,
-		meteorsForLevel:  2,
-		space:            resolv.NewSpace(ScreenWidth, ScreenHeight, 16, 16),
-		lasers:           make(map[int]*Laser),
-		laserCount:       0,
+		meteorSpawnTimer:     NewTimer(meteorSpawnTime),
+		baseVelocity:         baseMeteorVelocity,
+		velocityTimer:        NewTimer(meteorSpeedUpTime),
+		meteors:              make(map[int]*Meteor),
+		meteorCount:          0,
+		meteorsForLevel:      2,
+		space:                resolv.NewSpace(ScreenWidth, ScreenHeight, 16, 16),
+		lasers:               make(map[int]*Laser),
+		laserCount:           0,
+		explosionSprite:      assets.ExplosionSprite,
+		explosionSmallSprite: assets.ExplosionSmallSprite,
+		cleanUpTimer:         NewTimer(cleanUpExplosionTime),
 	}
 	g.player = NewPlayer(g)
 	g.space.Add(g.player.playerObj)
+
+	g.explosionFrames = assets.Explosion
 
 	return g
 }
@@ -63,6 +76,10 @@ func (g *GameScene) Update(state *State) error {
 
 	g.isPlayerCollidingWithMeteor()
 
+	g.isMeteorHitByPlayerLaser()
+
+	g.cleanUpMeteorsAndAliens()
+
 	return nil
 }
 
@@ -82,6 +99,35 @@ func (g *GameScene) Draw(screen *ebiten.Image) {
 
 func (g *GameScene) Layout(outsideWidth, outsideHeight int) (ScreenWidth, ScreenHeight int) {
 	return outsideWidth, outsideHeight
+}
+
+func (g *GameScene) isMeteorHitByPlayerLaser() {
+	for _, meteor := range g.meteors {
+		for _, laser := range g.lasers {
+			if meteor.meteorObj.IsIntersecting(laser.laserObj) {
+				if meteor.meteorObj.Tags().Has(TagSmall) {
+					meteor.sprite = g.explosionSmallSprite
+					g.score++
+				} else {
+					oldPosition := meteor.position
+
+					meteor.sprite = g.explosionSprite
+
+					g.score++
+
+					numberToSpawn := rand.Intn(numOfSmallMeteorsFromLargeMeteor)
+					for i := 0; i < numberToSpawn; i++ {
+						meteor := NewSmallMeteor(baseMeteorVelocity, g, len(meteor.game.meteors)-1)
+						meteor.position = Vector{oldPosition.X + float64(rand.Intn(100-50)+50), oldPosition.Y + float64(rand.Intn(100-50)+50)}
+						meteor.meteorObj.SetPosition(meteor.position.X, meteor.position.Y)
+						g.space.Add(meteor.meteorObj)
+						g.meteorCount++
+						g.meteors[meteor.game.meteorCount] = meteor
+					}
+				}
+			}
+		}
+	}
 }
 
 func (g *GameScene) spawnMeteors() {
@@ -111,5 +157,18 @@ func (g *GameScene) isPlayerCollidingWithMeteor() {
 			data := m.meteorObj.Data().(*ObjectData)
 			fmt.Println("Player collided with meteor", data.index)
 		}
+	}
+}
+
+func (g *GameScene) cleanUpMeteorsAndAliens() {
+	g.cleanUpTimer.Update()
+	if g.cleanUpTimer.IsReady() {
+		for i, meteor := range g.meteors {
+			if meteor.sprite == g.explosionSprite || meteor.sprite == g.explosionSmallSprite {
+				delete(g.meteors, i)
+				g.space.Remove(meteor.meteorObj)
+			}
+		}
+		g.cleanUpTimer.Reset()
 	}
 }
