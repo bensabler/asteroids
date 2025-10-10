@@ -30,6 +30,7 @@ var ExhaustSprite = mustLoadImage("images/fire.png")
 var LaserOneSound = mustLoadOggVorbis("audio/fire.ogg")
 var LaserTwoSound = mustLoadOggVorbis("audio/fire.ogg")
 var LaserThreeSound = mustLoadOggVorbis("audio/fire.ogg")
+var ExplosionSound = mustLoadOggVorbis("audio/explosion.ogg")
 
 func mustLoadImage(name string) *ebiten.Image {
 	file, err := assets.Open(name)
