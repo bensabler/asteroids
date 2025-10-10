@@ -2,6 +2,7 @@ package asteroids
 
 import (
 	"math"
+	"time"
 
 	"github.com/bensabler/asteroids/assets"
 	"github.com/hajimehoshi/ebiten/v2"
@@ -13,6 +14,9 @@ const (
 	maxAcceleration   = 8.0
 	ScreenWidth       = 1280
 	ScreenHeight      = 720
+	shootCoolDown     = time.Millisecond * 150
+	burstCoolDown     = time.Millisecond * 500
+	laserSpawnOffset  = 50.0
 )
 
 var curAcceleration float64
@@ -24,6 +28,8 @@ type Player struct {
 	position       Vector
 	playerVelocity float64
 	playerObj      *resolv.Circle
+	shootCoolDown  *Timer
+	burstCoolDown  *Timer
 }
 
 func NewPlayer(game *GameScene) *Player {
@@ -39,14 +45,16 @@ func NewPlayer(game *GameScene) *Player {
 		Y: (ScreenHeight / 2) - halfHeight,
 	}
 
-	// Create a collisiopn object.
+	// Create a collision object.
 	playerObj := resolv.NewCircle(pos.X, pos.Y, float64(sprite.Bounds().Dx()/2))
 
 	p := &Player{
-		sprite:    sprite,
-		game:      game,
-		position:  pos,
-		playerObj: playerObj,
+		sprite:        sprite,
+		game:          game,
+		position:      pos,
+		playerObj:     playerObj,
+		shootCoolDown: NewTimer(shootCoolDown),
+		burstCoolDown: NewTimer(burstCoolDown),
 	}
 
 	p.playerObj.SetPosition(pos.X, pos.Y)
