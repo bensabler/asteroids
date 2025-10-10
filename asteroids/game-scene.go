@@ -1,7 +1,6 @@
 package asteroids
 
 import (
-	"fmt"
 	"math/rand"
 	"time"
 
@@ -34,6 +33,7 @@ type GameScene struct {
 	explosionSprite      *ebiten.Image
 	explosionFrames      []*ebiten.Image
 	cleanUpTimer         *Timer
+	playerIsDead         bool
 }
 
 func NewGameScene() *GameScene {
@@ -61,6 +61,10 @@ func NewGameScene() *GameScene {
 
 func (g *GameScene) Update(state *State) error {
 	g.player.Update()
+
+	g.isPlayerDying()
+
+	g.isPlayerDead(state)
 
 	g.spawnMeteors()
 
@@ -154,8 +158,12 @@ func (g *GameScene) speedUpMeteors() {
 func (g *GameScene) isPlayerCollidingWithMeteor() {
 	for _, m := range g.meteors {
 		if m.meteorObj.IsIntersecting(g.player.playerObj) {
-			data := m.meteorObj.Data().(*ObjectData)
-			fmt.Println("Player collided with meteor", data.index)
+			if !g.player.isShielded {
+				m.game.player.isDying = true
+				break
+			} else {
+				// Bounce the meteor off player
+			}
 		}
 	}
 }
@@ -170,5 +178,32 @@ func (g *GameScene) cleanUpMeteorsAndAliens() {
 			}
 		}
 		g.cleanUpTimer.Reset()
+	}
+}
+
+func (g *GameScene) isPlayerDying() {
+	if g.player.isDying {
+		g.player.dyingTimer.Update()
+		if g.player.dyingTimer.IsReady() {
+			g.player.dyingTimer.Reset()
+			g.player.dyingCounter++
+			if g.player.dyingCounter == 12 {
+				g.player.isDying = false
+				g.player.isDead = true
+			} else if g.player.dyingCounter < 12 {
+				g.player.sprite = g.explosionFrames[g.player.dyingCounter]
+			} else {
+				// Do nothing
+			}
+		}
+	}
+}
+
+func (g *GameScene) isPlayerDead(state *State) {
+	if g.player.isDead {
+		g.player.livesRemaning--
+		if g.player.livesRemaning == 0 {
+			state.SceneManager.GoToScene(NewGameScene())
+		}
 	}
 }

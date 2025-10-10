@@ -10,14 +10,15 @@ import (
 )
 
 const (
-	rotationPerSecond = math.Pi
-	maxAcceleration   = 8.0
-	ScreenWidth       = 1280
-	ScreenHeight      = 720
-	shootCoolDown     = time.Millisecond * 150
-	burstCoolDown     = time.Millisecond * 500
-	laserSpawnOffset  = 50.0
-	maxShotsPerBurst  = 3
+	rotationPerSecond    = math.Pi
+	maxAcceleration      = 8.0
+	ScreenWidth          = 1280
+	ScreenHeight         = 720
+	shootCoolDown        = time.Millisecond * 150
+	burstCoolDown        = time.Millisecond * 500
+	laserSpawnOffset     = 50.0
+	maxShotsPerBurst     = 3
+	dyingAnimationAmount = 50 * time.Millisecond
 )
 
 var curAcceleration float64
@@ -32,6 +33,12 @@ type Player struct {
 	playerObj      *resolv.Circle
 	shootCoolDown  *Timer
 	burstCoolDown  *Timer
+	isShielded     bool
+	isDying        bool
+	isDead         bool
+	dyingTimer     *Timer
+	dyingCounter   int
+	livesRemaning  int
 }
 
 func NewPlayer(game *GameScene) *Player {
@@ -57,6 +64,12 @@ func NewPlayer(game *GameScene) *Player {
 		playerObj:     playerObj,
 		shootCoolDown: NewTimer(shootCoolDown),
 		burstCoolDown: NewTimer(burstCoolDown),
+		isShielded:    false,
+		isDying:       false,
+		isDead:        false,
+		dyingTimer:    NewTimer(dyingAnimationAmount),
+		dyingCounter:  0,
+		livesRemaning: 1,
 	}
 
 	p.playerObj.SetPosition(pos.X, pos.Y)
@@ -90,6 +103,8 @@ func (p *Player) Update() {
 
 	speed := rotationPerSecond / float64(ebiten.TPS())
 
+	p.isPlayerDead()
+
 	// rotate left
 	if ebiten.IsKeyPressed(ebiten.KeyLeft) {
 		p.rotation -= speed
@@ -109,6 +124,12 @@ func (p *Player) Update() {
 	p.shootCoolDown.Update()
 
 	p.fireLasers()
+}
+
+func (p *Player) isPlayerDead() {
+	if p.isDead {
+		p.game.playerIsDead = true
+	}
 }
 
 func (p *Player) fireLasers() {
