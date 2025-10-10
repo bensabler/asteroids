@@ -6,6 +6,7 @@ import (
 
 	"github.com/bensabler/asteroids/assets"
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/solarlune/resolv"
 )
 
@@ -117,6 +118,8 @@ func (p *Player) Update() {
 
 	p.accelerate()
 
+	p.isDoneAccelerating()
+
 	p.playerObj.SetPosition(p.position.X, p.position.Y)
 
 	p.burstCoolDown.Update()
@@ -180,6 +183,20 @@ func (p *Player) accelerate() {
 		// Move the player on the screen.
 		p.position.X += dx
 		p.position.Y += dy
+
+		// Play thrust sound
+		if !p.game.thrustPlayer.IsPlaying() {
+			_ = p.game.thrustPlayer.Rewind()
+			p.game.thrustPlayer.Play()
+		}
+	}
+}
+
+func (p *Player) isDoneAccelerating() {
+	if inpututil.IsKeyJustReleased(ebiten.KeyUp) {
+		if p.game.thrustPlayer.IsPlaying() {
+			p.game.thrustPlayer.Pause()
+		}
 	}
 }
 

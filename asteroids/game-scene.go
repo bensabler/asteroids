@@ -6,6 +6,7 @@ import (
 
 	"github.com/bensabler/asteroids/assets"
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/audio"
 	"github.com/solarlune/resolv"
 )
 
@@ -34,6 +35,8 @@ type GameScene struct {
 	explosionFrames      []*ebiten.Image
 	cleanUpTimer         *Timer
 	playerIsDead         bool
+	audioContext         *audio.Context
+	thrustPlayer         *audio.Player
 }
 
 func NewGameScene() *GameScene {
@@ -55,6 +58,14 @@ func NewGameScene() *GameScene {
 	g.space.Add(g.player.playerObj)
 
 	g.explosionFrames = assets.Explosion
+
+	// Load audio
+	g.audioContext = audio.NewContext(48000)
+	thrustPlayer, err := g.audioContext.NewPlayer(assets.ThrustSound)
+	if err != nil {
+		panic(err)
+	}
+	g.thrustPlayer = thrustPlayer
 
 	return g
 }
