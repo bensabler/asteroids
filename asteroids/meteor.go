@@ -72,3 +72,46 @@ func NewMeteor(baseVelocity float64, game *GameScene, index int) *Meteor {
 
 	return meteor
 }
+
+func (m *Meteor) Update() {
+	dx := m.movement.X
+	dy := m.movement.Y
+
+	m.position.X += dx
+	m.position.Y += dy
+
+	m.rotation += m.rotationSpeed
+
+	// Keep meteor on screen
+	m.keepOnScreen()
+
+}
+
+func (m *Meteor) Draw(screen *ebiten.Image) {
+	bounds := m.sprite.Bounds()
+	halfWidth := float64(bounds.Dx()) / 2
+	halfHeight := float64(bounds.Dy()) / 2
+
+	op := &ebiten.DrawImageOptions{}
+	op.GeoM.Translate(-halfWidth, -halfHeight)
+	op.GeoM.Rotate(m.rotation)
+	op.GeoM.Translate(halfWidth, halfHeight)
+
+	op.GeoM.Translate(m.position.X, m.position.Y)
+
+	screen.DrawImage(m.sprite, op)
+}
+
+func (m *Meteor) keepOnScreen() {
+	if m.position.X >= float64(ScreenWidth) {
+		m.position.X = 0
+	} else if m.position.X < 0 {
+		m.position.X = float64(ScreenWidth)
+	}
+
+	if m.position.Y >= float64(ScreenHeight) {
+		m.position.Y = 0
+	} else if m.position.Y < 0 {
+		m.position.Y = float64(ScreenHeight)
+	}
+}

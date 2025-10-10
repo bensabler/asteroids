@@ -10,6 +10,8 @@ import (
 )
 
 type TitleScene struct {
+	meteors     map[int]*Meteor
+	meteorCount int
 }
 
 func (t *TitleScene) Draw(screen *ebiten.Image) {
@@ -26,6 +28,10 @@ func (t *TitleScene) Draw(screen *ebiten.Image) {
 		Source: assets.TitleFont,
 		Size:   72,
 	}, op)
+
+	for _, meteor := range t.meteors {
+		meteor.Draw(screen)
+	}
 }
 
 func (t *TitleScene) Update(state *State) error {
@@ -33,10 +39,16 @@ func (t *TitleScene) Update(state *State) error {
 		state.SceneManager.GoToScene(NewGameScene())
 		return nil
 	}
+
+	if len(t.meteors) < 10 {
+		meteor := NewMeteor(0.25, &GameScene{}, len(t.meteors)-1)
+		t.meteorCount++
+		t.meteors[t.meteorCount] = meteor
+	}
+
+	for _, meteor := range t.meteors {
+		meteor.Update()
+	}
+
 	return nil
 }
-
-// func widthOfText(f font.Face, text string) int {
-// 	_, textWidth := font.BoundString(f, text)
-// 	return (textWidth.Round())
-// }
