@@ -17,9 +17,11 @@ const (
 	shootCoolDown     = time.Millisecond * 150
 	burstCoolDown     = time.Millisecond * 500
 	laserSpawnOffset  = 50.0
+	maxShotsPerBurst  = 3
 )
 
 var curAcceleration float64
+var shotsFired = 0
 
 type Player struct {
 	game           *GameScene
@@ -101,6 +103,39 @@ func (p *Player) Update() {
 	p.accelerate()
 
 	p.playerObj.SetPosition(p.position.X, p.position.Y)
+
+	p.burstCoolDown.Update()
+
+	p.shootCoolDown.Update()
+
+	p.fireLasers()
+}
+
+func (p *Player) fireLasers() {
+	if p.burstCoolDown.IsReady() {
+		if p.shootCoolDown.IsReady() && ebiten.IsKeyPressed(ebiten.KeySpace) {
+			p.shootCoolDown.Reset()
+			shotsFired++
+			if shotsFired <= maxShotsPerBurst {
+				bounds := p.sprite.Bounds()
+				halfWidth := float64(bounds.Dx() / 2)
+				halfHeight := float64(bounds.Dy() / 2)
+
+				spawnPosition := Vector{
+					p.position.X + halfWidth + (math.Sin(p.rotation) * laserSpawnOffset),
+					p.position.Y + halfHeight + (math.Cos(p.rotation) * -laserSpawnOffset),
+				}
+
+				p.game.laserCount++
+				laser := NewLaser(spawnPosition, p.rotation, p.game.laserCount, p.game)
+				p.game.lasers[p.game.laserCount] = laser
+				p.game.space.Add(laser.laserObj)
+			} else {
+				p.burstCoolDown.Reset()
+				shotsFired = 0
+			}
+		}
+	}
 }
 
 func (p *Player) accelerate() {
