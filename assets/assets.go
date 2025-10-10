@@ -9,6 +9,7 @@ import (
 	"io/fs"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/audio/vorbis"
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
 )
 
@@ -24,6 +25,7 @@ var LaserSprite = mustLoadImage("images/laser.png")
 var ExplosionSprite = mustLoadImage("images/explosion.png")
 var ExplosionSmallSprite = mustLoadImage("images/explosion-small.png")
 var Explosion = createExplosion()
+var ThrustSound = mustLoadOggVorbis("assets/thrust.ogg")
 
 func mustLoadImage(name string) *ebiten.Image {
 	file, err := assets.Open(name)
@@ -83,4 +85,18 @@ func createExplosion() []*ebiten.Image {
 	}
 
 	return frames
+}
+
+func mustLoadOggVorbis(name string) *vorbis.Stream {
+	file, err := assets.ReadFile("audio/thrust.ogg")
+	if err != nil {
+		panic(err)
+	}
+
+	stream, err := vorbis.DecodeWithoutResampling(bytes.NewReader(file))
+	if err != nil {
+		panic(err)
+	}
+
+	return stream
 }
