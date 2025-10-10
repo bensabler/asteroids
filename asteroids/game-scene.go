@@ -16,6 +16,7 @@ const (
 	meteorSpeedUpAmount  = 0.1
 	meteorSpeedUpTime    = 1000 * time.Millisecond
 	cleanUpExplosionTime = 200 * time.Millisecond
+	baseBeatWaitTime     = 1600
 )
 
 type GameScene struct {
@@ -42,6 +43,11 @@ type GameScene struct {
 	laserTwoPlayer       *audio.Player
 	laserThreePlayer     *audio.Player
 	explosionPlayer      *audio.Player
+	beatOnePlayer        *audio.Player
+	beatTwoPlayer        *audio.Player
+	beatTimer            *Timer
+	beatWaitTime         int
+	playBeatOne          bool
 }
 
 func NewGameScene() *GameScene {
@@ -58,6 +64,8 @@ func NewGameScene() *GameScene {
 		explosionSprite:      assets.ExplosionSprite,
 		explosionSmallSprite: assets.ExplosionSmallSprite,
 		cleanUpTimer:         NewTimer(cleanUpExplosionTime),
+		beatTimer:            NewTimer(2 * time.Second),
+		beatWaitTime:         baseBeatWaitTime,
 	}
 	g.player = NewPlayer(g)
 	g.space.Add(g.player.playerObj)
@@ -96,6 +104,18 @@ func NewGameScene() *GameScene {
 	}
 	g.explosionPlayer = explosionPlayer
 
+	beatOnePlayer, err := g.audioContext.NewPlayer(assets.BeatOneSound)
+	if err != nil {
+		panic(err)
+	}
+	g.beatOnePlayer = beatOnePlayer
+
+	beatTwoPlayer, err := g.audioContext.NewPlayer(assets.BeatTwoSound)
+	if err != nil {
+		panic(err)
+	}
+	g.beatTwoPlayer = beatTwoPlayer
+
 	return g
 }
 
@@ -125,6 +145,8 @@ func (g *GameScene) Update(state *State) error {
 	g.isMeteorHitByPlayerLaser()
 
 	g.cleanUpMeteorsAndAliens()
+
+	g.beatSound()
 
 	return nil
 }
@@ -290,4 +312,27 @@ func (g *GameScene) Reset() {
 	g.exhaust = nil
 	g.space.RemoveAll()
 	g.space.Add(g.player.playerObj)
+}
+
+func (g *GameScene) beatSound() {
+	g.beatTimer.Update()
+	if g.beatTimer.IsReady() {
+		if g.playBeatOne {
+			_ = g.beatOnePlayer.Rewind()
+			g.beatOnePlayer.Play()
+			g.beatTimer.Reset()
+		} else {
+			_ = g.beatTwoPlayer.Rewind()
+			g.beatTwoPlayer.Play()
+			g.beatTimer.Reset()
+		}
+
+		g.playBeatOne = !g.playBeatOne
+
+		// Speed up the timer
+		if g.beatWaitTime > 400 {
+			g.beatWaitTime = g.beatWaitTime - 25
+			g.beatTimer = NewTimer(time.Millisecond * time.Duration(g.beatWaitTime))
+		}
+	}
 }
