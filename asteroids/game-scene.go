@@ -38,6 +38,9 @@ type GameScene struct {
 	audioContext         *audio.Context
 	thrustPlayer         *audio.Player
 	exhaust              *Exhaust
+	laserOnePlayer       *audio.Player
+	laserTwoPlayer       *audio.Player
+	laserThreePlayer     *audio.Player
 }
 
 func NewGameScene() *GameScene {
@@ -67,6 +70,24 @@ func NewGameScene() *GameScene {
 		panic(err)
 	}
 	g.thrustPlayer = thrustPlayer
+
+	laserOnePlayer, err := g.audioContext.NewPlayer(assets.LaserOneSound)
+	if err != nil {
+		panic(err)
+	}
+	g.laserOnePlayer = laserOnePlayer
+
+	laserTwoPlayer, err := g.audioContext.NewPlayer(assets.LaserTwoSound)
+	if err != nil {
+		panic(err)
+	}
+	g.laserTwoPlayer = laserTwoPlayer
+
+	laserThreePlayer, err := g.audioContext.NewPlayer(assets.LaserThreeSound)
+	if err != nil {
+		panic(err)
+	}
+	g.laserThreePlayer = laserThreePlayer
 
 	return g
 }
