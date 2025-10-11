@@ -175,6 +175,13 @@ func (g *GameScene) Draw(screen *ebiten.Image) {
 		laser.Draw(screen)
 	}
 
+	// Draw the life indicators
+	if len(g.player.lifeIndicators) > 0 {
+		for _, x := range g.player.lifeIndicators {
+			x.Draw(screen)
+		}
+	}
+
 }
 
 func (g *GameScene) Layout(outsideWidth, outsideHeight int) (ScreenWidth, ScreenHeight int) {
@@ -301,6 +308,14 @@ func (g *GameScene) isPlayerDead(state *State) {
 				meteorCount: 5,
 				stars:       GenerateStars(numberOfStars),
 			})
+		} else {
+			score := g.score
+			livesRemaining := g.player.livesRemaning
+			lifeSlice := g.player.lifeIndicators[:len(g.player.lifeIndicators)-1]
+			g.Reset()
+			g.player.livesRemaning = livesRemaining
+			g.score = score
+			g.player.lifeIndicators = lifeSlice
 		}
 	}
 }

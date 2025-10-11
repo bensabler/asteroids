@@ -20,6 +20,7 @@ const (
 	laserSpawnOffset     = 50.0
 	maxShotsPerBurst     = 3
 	dyingAnimationAmount = 50 * time.Millisecond
+	numberOfLives        = 3
 )
 
 var curAcceleration float64
@@ -40,6 +41,7 @@ type Player struct {
 	dyingTimer     *Timer
 	dyingCounter   int
 	livesRemaning  int
+	lifeIndicators []*LifeIndicator
 }
 
 func NewPlayer(game *GameScene) *Player {
@@ -58,19 +60,29 @@ func NewPlayer(game *GameScene) *Player {
 	// Create a collision object.
 	playerObj := resolv.NewCircle(pos.X, pos.Y, float64(sprite.Bounds().Dx()/2))
 
+	// Create life indicators
+	var lifeIndicators []*LifeIndicator
+	var xPosition = 20.0
+	for i := 0; i < numberOfLives; i++ {
+		lifeIndicator := NewLifeIndicator(Vector{X: xPosition, Y: 20})
+		lifeIndicators = append(lifeIndicators, lifeIndicator)
+		xPosition += 50.0
+	}
+
 	p := &Player{
-		sprite:        sprite,
-		game:          game,
-		position:      pos,
-		playerObj:     playerObj,
-		shootCoolDown: NewTimer(shootCoolDown),
-		burstCoolDown: NewTimer(burstCoolDown),
-		isShielded:    false,
-		isDying:       false,
-		isDead:        false,
-		dyingTimer:    NewTimer(dyingAnimationAmount),
-		dyingCounter:  0,
-		livesRemaning: 1,
+		sprite:         sprite,
+		game:           game,
+		position:       pos,
+		playerObj:      playerObj,
+		shootCoolDown:  NewTimer(shootCoolDown),
+		burstCoolDown:  NewTimer(burstCoolDown),
+		isShielded:     false,
+		isDying:        false,
+		isDead:         false,
+		dyingTimer:     NewTimer(dyingAnimationAmount),
+		dyingCounter:   0,
+		livesRemaning:  numberOfLives,
+		lifeIndicators: lifeIndicators,
 	}
 
 	p.playerObj.SetPosition(pos.X, pos.Y)
