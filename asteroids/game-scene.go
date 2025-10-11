@@ -295,8 +295,12 @@ func (g *GameScene) isPlayerDead(state *State) {
 	if g.player.isDead {
 		g.player.livesRemaning--
 		if g.player.livesRemaning == 0 {
-			g.Reset()
-			state.SceneManager.GoToScene(g)
+			state.SceneManager.GoToScene(&GameOverScene{
+				game:        g,
+				meteors:     make(map[int]*Meteor),
+				meteorCount: 5,
+				stars:       GenerateStars(numberOfStars),
+			})
 		}
 	}
 }
