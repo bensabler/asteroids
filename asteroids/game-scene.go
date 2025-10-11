@@ -55,6 +55,8 @@ type GameScene struct {
 	playBeatOne          bool
 	stars                []*Star
 	currentLevel         int
+	shield               *Shield
+	shieldsUpPlayer      *audio.Player
 }
 
 func NewGameScene() *GameScene {
@@ -125,6 +127,12 @@ func NewGameScene() *GameScene {
 	}
 	g.beatTwoPlayer = beatTwoPlayer
 
+	shieldsUpPlayer, err := g.audioContext.NewPlayer(assets.ShieldSound)
+	if err != nil {
+		panic(err)
+	}
+	g.shieldsUpPlayer = shieldsUpPlayer
+
 	return g
 }
 
@@ -132,6 +140,8 @@ func (g *GameScene) Update(state *State) error {
 	g.player.Update()
 
 	g.updateExhaust()
+
+	g.updateShield()
 
 	g.isPlayerDying()
 
@@ -174,6 +184,11 @@ func (g *GameScene) Draw(screen *ebiten.Image) {
 		g.exhaust.Draw(screen)
 	}
 
+	// Draw the shield
+	if g.shield != nil {
+		g.shield.Draw(screen)
+	}
+
 	// Draw the meteors
 	for _, meteor := range g.meteors {
 		meteor.Draw(screen)
@@ -189,6 +204,14 @@ func (g *GameScene) Draw(screen *ebiten.Image) {
 			x.Draw(screen)
 		}
 	}
+
+	// Draw the shield indicators
+	if len(g.player.shieldIndicators) > 0 {
+		for _, x := range g.player.shieldIndicators {
+			x.Draw(screen)
+		}
+	}
+
 	// Update and Draw the score
 	textToDraw := fmt.Sprintf("Score: %06d", g.score)
 	op := &text.DrawOptions{
@@ -315,9 +338,28 @@ func (g *GameScene) isPlayerCollidingWithMeteor() {
 				break
 			} else {
 				// Bounce the meteor off player
+				g.bounceMeteor(m)
 			}
 		}
 	}
+}
+
+func (g *GameScene) bounceMeteor(m *Meteor) {
+	direction := Vector{
+		X: (ScreenWidth/2 - m.position.X) * -1,
+		Y: (ScreenHeight/2 - m.position.Y) * -1,
+	}
+
+	// Normalize
+	normalizedDirection := direction.Normalize()
+	velocity := g.baseVelocity * 1.5
+
+	movement := Vector{
+		X: normalizedDirection.X * velocity,
+		Y: normalizedDirection.Y * velocity,
+	}
+
+	m.movement = movement
 }
 
 func (g *GameScene) cleanUpMeteorsAndAliens() {
@@ -375,6 +417,8 @@ func (g *GameScene) isPlayerDead(state *State) {
 			livesRemaining := g.player.livesRemaning
 			lifeSlice := g.player.lifeIndicators[:len(g.player.lifeIndicators)-1]
 			stars := g.stars
+			shieldsRemaining := g.player.shieldsRemaning
+			shieldIndicatorSlice := g.player.shieldIndicators
 
 			g.Reset()
 
@@ -382,6 +426,8 @@ func (g *GameScene) isPlayerDead(state *State) {
 			g.score = score
 			g.player.lifeIndicators = lifeSlice
 			g.stars = stars
+			g.player.shieldsRemaning = shieldsRemaining
+			g.player.shieldIndicators = shieldIndicatorSlice
 		}
 	}
 }
@@ -406,6 +452,8 @@ func (g *GameScene) Reset() {
 	g.space.RemoveAll()
 	g.space.Add(g.player.playerObj)
 	g.stars = GenerateStars(numberOfStars)
+	g.player.shieldsRemaning = numberOfShields
+	g.player.isShielded = false
 }
 
 func (g *GameScene) beatSound() {
@@ -458,5 +506,11 @@ func (g *GameScene) isLevelComplete(state *State) {
 			delete(g.lasers, k)
 			g.space.Remove(v.laserObj)
 		}
+	}
+}
+
+func (g *GameScene) updateShield() {
+	if g.shield != nil {
+		g.shield.Update()
 	}
 }
