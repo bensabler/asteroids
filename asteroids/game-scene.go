@@ -1,12 +1,16 @@
 package asteroids
 
 import (
+	"fmt"
+	"image/color"
+	"log"
 	"math/rand"
 	"time"
 
 	"github.com/bensabler/asteroids/assets"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/audio"
+	"github.com/hajimehoshi/ebiten/v2/text/v2"
 	"github.com/solarlune/resolv"
 )
 
@@ -50,6 +54,7 @@ type GameScene struct {
 	beatWaitTime         int
 	playBeatOne          bool
 	stars                []*Star
+	currentLevel         int
 }
 
 func NewGameScene() *GameScene {
@@ -68,6 +73,7 @@ func NewGameScene() *GameScene {
 		cleanUpTimer:         NewTimer(cleanUpExplosionTime),
 		beatTimer:            NewTimer(2 * time.Second),
 		beatWaitTime:         baseBeatWaitTime,
+		currentLevel:         1,
 	}
 	g.player = NewPlayer(g)
 	g.space.Add(g.player.playerObj)
@@ -151,6 +157,8 @@ func (g *GameScene) Update(state *State) error {
 
 	g.beatSound()
 
+	g.isLevelComplete(state)
+
 	return nil
 }
 
@@ -181,6 +189,51 @@ func (g *GameScene) Draw(screen *ebiten.Image) {
 			x.Draw(screen)
 		}
 	}
+	// Update and Draw the score
+	textToDraw := fmt.Sprintf("Score: %06d", g.score)
+	op := &text.DrawOptions{
+		LayoutOptions: text.LayoutOptions{
+			PrimaryAlign: text.AlignCenter,
+		},
+	}
+	op.ColorScale.ScaleWithColor(color.White)
+	op.GeoM.Translate(ScreenWidth/2, 40)
+	text.Draw(screen, textToDraw, &text.GoTextFace{
+		Source: assets.ScoreFont,
+		Size:   24,
+	}, op)
+
+	// Update and Draw the high score
+	if g.score >= highScore {
+		highScore = g.score
+	}
+
+	textToDraw = fmt.Sprintf("High Score: %06d", highScore)
+	op = &text.DrawOptions{
+		LayoutOptions: text.LayoutOptions{
+			PrimaryAlign: text.AlignCenter,
+		},
+	}
+	op.ColorScale.ScaleWithColor(color.White)
+	op.GeoM.Translate(ScreenWidth/2, 80)
+	text.Draw(screen, textToDraw, &text.GoTextFace{
+		Source: assets.ScoreFont,
+		Size:   16,
+	}, op)
+
+	// Update and Draw current level
+	textToDraw = fmt.Sprintf("Current Level: %d", g.currentLevel)
+	op = &text.DrawOptions{
+		LayoutOptions: text.LayoutOptions{
+			PrimaryAlign: text.AlignCenter,
+		},
+	}
+	op.ColorScale.ScaleWithColor(color.White)
+	op.GeoM.Translate(ScreenWidth/2, ScreenHeight-40)
+	text.Draw(screen, textToDraw, &text.GoTextFace{
+		Source: assets.LevelFont,
+		Size:   16,
+	}, op)
 
 }
 
@@ -302,6 +355,15 @@ func (g *GameScene) isPlayerDead(state *State) {
 	if g.player.isDead {
 		g.player.livesRemaning--
 		if g.player.livesRemaning == 0 {
+
+			// New high score?
+			if g.score > originalHighScore {
+				err := updateHighScore(g.score)
+				if err != nil {
+					log.Println(err)
+				}
+			}
+
 			state.SceneManager.GoToScene(&GameOverScene{
 				game:        g,
 				meteors:     make(map[int]*Meteor),
@@ -312,10 +374,14 @@ func (g *GameScene) isPlayerDead(state *State) {
 			score := g.score
 			livesRemaining := g.player.livesRemaning
 			lifeSlice := g.player.lifeIndicators[:len(g.player.lifeIndicators)-1]
+			stars := g.stars
+
 			g.Reset()
+
 			g.player.livesRemaning = livesRemaining
 			g.score = score
 			g.player.lifeIndicators = lifeSlice
+			g.stars = stars
 		}
 	}
 }
@@ -361,6 +427,36 @@ func (g *GameScene) beatSound() {
 		if g.beatWaitTime > 400 {
 			g.beatWaitTime = g.beatWaitTime - 25
 			g.beatTimer = NewTimer(time.Millisecond * time.Duration(g.beatWaitTime))
+		}
+	}
+}
+
+func (g *GameScene) isLevelComplete(state *State) {
+	if len(g.meteors) == 0 && g.meteorCount >= g.meteorsForLevel {
+		g.baseVelocity = baseMeteorVelocity
+		g.currentLevel++
+
+		if g.currentLevel%5 == 0 {
+			if g.player.livesRemaning < 6 {
+				g.player.livesRemaning++
+				x := float64(20 + (g.player.livesRemaning * 50.0))
+				y := 20.0
+				g.player.lifeIndicators = append(g.player.lifeIndicators, NewLifeIndicator(Vector{X: x, Y: y}))
+			}
+
+		}
+
+		g.beatWaitTime = baseBeatWaitTime
+		state.SceneManager.GoToScene(&LevelStartsScene{
+			game:           g,
+			nextLevelTimer: NewTimer(3 * time.Second),
+			stars:          GenerateStars(numberOfStars),
+		})
+
+		// Clear out any remaining lasers
+		for k, v := range g.lasers {
+			delete(g.lasers, k)
+			g.space.Remove(v.laserObj)
 		}
 	}
 }

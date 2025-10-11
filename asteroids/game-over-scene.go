@@ -41,6 +41,21 @@ func (o *GameOverScene) Draw(screen *ebiten.Image) {
 		Size:   72,
 	}, op)
 
+	if o.game.score > originalHighScore {
+		textToDraw = "New High Score!"
+		op := &text.DrawOptions{
+			LayoutOptions: text.LayoutOptions{
+				PrimaryAlign: text.AlignCenter,
+			},
+		}
+		op.ColorScale.ScaleWithColor(color.RGBA{R: 255, G: 215, B: 0, A: 255}) // Gold color
+		op.GeoM.Translate(float64(ScreenWidth/2), float64((ScreenHeight/2)+80))
+		text.Draw(screen, textToDraw, &text.GoTextFace{
+			Source: assets.TitleFont,
+			Size:   48,
+		}, op)
+	}
+
 }
 
 func (o *GameOverScene) Update(state *State) error {
