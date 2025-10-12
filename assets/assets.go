@@ -39,6 +39,7 @@ var LifeIndicator = mustLoadImage("images/life-indicator.png")
 var ShieldSound = mustLoadOggVorbis("audio/shield.ogg")
 var ShieldSprite = mustLoadImage("images/shield.png")
 var ShieldIndicator = mustLoadImage("images/shield-indicator.png")
+var HyperspaceIndicator = mustLoadImage("images/hyperspace.png")
 
 func mustLoadImage(name string) *ebiten.Image {
 	file, err := assets.Open(name)
