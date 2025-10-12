@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"image/color"
 	"log"
+	"math"
 	"math/rand"
 	"time"
 
@@ -185,6 +186,12 @@ func (g *GameScene) Update(state *State) error {
 		alien.Update()
 	}
 
+	g.letAliensAttack()
+
+	for _, al := range g.alienLasers {
+		al.Update()
+	}
+
 	for _, meteor := range g.meteors {
 		meteor.Update()
 	}
@@ -260,6 +267,11 @@ func (g *GameScene) Draw(screen *ebiten.Image) {
 	// Draw the aliens
 	for _, alien := range g.aliens {
 		alien.Draw(screen)
+	}
+
+	// Draw the alien lasers
+	for _, al := range g.alienLasers {
+		al.Draw(screen)
 	}
 
 	// Update and Draw the score
@@ -348,7 +360,7 @@ func (g *GameScene) spawnAliens() {
 
 func (g *GameScene) removeOffscreenAliens() {
 	for i, alien := range g.aliens {
-		if alien.position.X < -50 || alien.position.X > ScreenWidth+50 || alien.position.Y < -50 || alien.position.Y > ScreenHeight+50 {
+		if alien.position.X < -200 || alien.position.X > ScreenWidth+200 || alien.position.Y < -200 || alien.position.Y > ScreenHeight+200 {
 			delete(g.aliens, i)
 			g.space.Remove(alien.alienObj)
 		}
@@ -603,5 +615,61 @@ func (g *GameScene) isLevelComplete(state *State) {
 func (g *GameScene) updateShield() {
 	if g.shield != nil {
 		g.shield.Update()
+	}
+}
+
+func (g *GameScene) letAliensAttack() {
+	if len(g.aliens) > 0 {
+		if !g.alienSoundPlayer.IsPlaying() {
+			_ = g.alienSoundPlayer.Rewind()
+			g.alienSoundPlayer.Play()
+		}
+
+		// Update the alien attack timer
+		g.alienAttackTimer.Update()
+
+		// Is the timer reached? If so, reset the timer and attack
+		if g.alienAttackTimer.IsReady() {
+			g.alienAttackTimer.Reset()
+
+			// Loop through the aliens and have them attack
+			for _, alien := range g.aliens {
+				bounds := alien.sprite.Bounds()
+				halfWidth := float64(bounds.Dx()) / 2
+				halfHeight := float64(bounds.Dy()) / 2
+
+				var degreesRadian float64
+
+				// Is the alien intelligent?
+				if !alien.isIntelligent {
+					// No, fire in a random direction
+					degreesRadian = rand.Float64() * (math.Pi * 2)
+				} else {
+					// Yes, fire with some accuracy at the player
+					degreesRadian = math.Atan2(g.player.position.Y-alien.position.Y, g.player.position.X-alien.position.X)
+					degreesRadian = degreesRadian - math.Pi*-0.5
+				}
+
+				r := degreesRadian
+
+				offsetX := float64(alien.sprite.Bounds().Dx() - int(halfWidth))
+				offsetY := float64(alien.sprite.Bounds().Dy() - int(halfHeight))
+
+				spawnPosition := Vector{
+					X: alien.position.X + halfWidth + (math.Sin(r) - offsetX),
+					Y: alien.position.Y + halfHeight + (math.Cos(r) - offsetY),
+				}
+
+				laser := NewAlienLaser(spawnPosition, r)
+				g.alienLaserCount++
+				g.alienLasers[g.alienLaserCount] = laser
+
+				if !g.alienLaserPlayer.IsPlaying() {
+					_ = g.alienLaserPlayer.Rewind()
+					g.alienLaserPlayer.Play()
+				}
+
+			}
+		}
 	}
 }
