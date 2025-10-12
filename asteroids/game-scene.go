@@ -24,6 +24,7 @@ const (
 	numberOfStars        = 1000
 	alienAttackTime      = 3 * time.Second
 	alienSpawnTime       = 12 * time.Second
+	basedAlienVelocity   = 0.5
 )
 
 type GameScene struct {
@@ -90,6 +91,8 @@ func NewGameScene() *GameScene {
 		alienCount:           0,
 		alienLasers:          make(map[int]*AlienLaser),
 		alienLaserCount:      0,
+		alienSpawnTimer:      NewTimer(alienSpawnTime),
+		alienAttackTimer:     NewTimer(alienAttackTime),
 	}
 	g.player = NewPlayer(g)
 	g.space.Add(g.player.playerObj)
@@ -176,6 +179,12 @@ func (g *GameScene) Update(state *State) error {
 
 	g.spawnMeteors()
 
+	g.spawnAliens()
+
+	for _, alien := range g.aliens {
+		alien.Update()
+	}
+
 	for _, meteor := range g.meteors {
 		meteor.Update()
 	}
@@ -195,6 +204,10 @@ func (g *GameScene) Update(state *State) error {
 	g.beatSound()
 
 	g.isLevelComplete(state)
+
+	g.removeOffscreenAliens()
+
+	g.removeOffscreenLasers()
 
 	return nil
 }
@@ -242,6 +255,11 @@ func (g *GameScene) Draw(screen *ebiten.Image) {
 	// Draw the hyperspace indicator
 	if g.player.hyperSpaceTimer == nil || g.player.hyperSpaceTimer.IsReady() {
 		g.player.hyperspaceIndicator.Draw(screen)
+	}
+
+	// Draw the aliens
+	for _, alien := range g.aliens {
+		alien.Draw(screen)
 	}
 
 	// Update and Draw the score
@@ -294,6 +312,47 @@ func (g *GameScene) Draw(screen *ebiten.Image) {
 
 func (g *GameScene) Layout(outsideWidth, outsideHeight int) (ScreenWidth, ScreenHeight int) {
 	return outsideWidth, outsideHeight
+}
+
+func (g *GameScene) removeOffscreenLasers() {
+	for i, laser := range g.lasers {
+		if laser.position.X < -50 || laser.position.X > ScreenWidth+50 || laser.position.Y < -50 || laser.position.Y > ScreenHeight+50 {
+			g.space.Remove(laser.laserObj)
+			delete(g.lasers, i)
+
+		}
+	}
+
+	for i, alienLaser := range g.alienLasers {
+		if alienLaser.position.X < -50 || alienLaser.position.X > ScreenWidth+50 || alienLaser.position.Y < -50 || alienLaser.position.Y > ScreenHeight+50 {
+			g.space.Remove(alienLaser.laserObj)
+			delete(g.alienLasers, i)
+
+		}
+	}
+}
+
+func (g *GameScene) spawnAliens() {
+	g.alienSpawnTimer.Update()
+	if g.alienSpawnTimer.IsReady() {
+		g.alienSpawnTimer.Reset()
+		rnd := rand.Intn(100-1) + 1
+		if rnd > 50 {
+			alien := NewAlien(basedAlienVelocity, g)
+			g.space.Add(alien.alienObj)
+			g.alienCount++
+			g.aliens[g.alienCount] = alien
+		}
+	}
+}
+
+func (g *GameScene) removeOffscreenAliens() {
+	for i, alien := range g.aliens {
+		if alien.position.X < -50 || alien.position.X > ScreenWidth+50 || alien.position.Y < -50 || alien.position.Y > ScreenHeight+50 {
+			delete(g.aliens, i)
+			g.space.Remove(alien.alienObj)
+		}
+	}
 }
 
 func (g *GameScene) isMeteorHitByPlayerLaser() {
