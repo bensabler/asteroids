@@ -22,6 +22,8 @@ const (
 	cleanUpExplosionTime = 200 * time.Millisecond
 	baseBeatWaitTime     = 1600
 	numberOfStars        = 1000
+	alienAttackTime      = 3 * time.Second
+	alienSpawnTime       = 12 * time.Second
 )
 
 type GameScene struct {
@@ -57,6 +59,14 @@ type GameScene struct {
 	currentLevel         int
 	shield               *Shield
 	shieldsUpPlayer      *audio.Player
+	alienAttackTimer     *Timer
+	alienCount           int
+	alienLaserCount      int
+	alienLaserPlayer     *audio.Player
+	alienLasers          map[int]*AlienLaser
+	alienSoundPlayer     *audio.Player
+	alienSpawnTimer      *Timer
+	aliens               map[int]*Alien
 }
 
 func NewGameScene() *GameScene {
@@ -76,6 +86,10 @@ func NewGameScene() *GameScene {
 		beatTimer:            NewTimer(2 * time.Second),
 		beatWaitTime:         baseBeatWaitTime,
 		currentLevel:         1,
+		aliens:               make(map[int]*Alien),
+		alienCount:           0,
+		alienLasers:          make(map[int]*AlienLaser),
+		alienLaserCount:      0,
 	}
 	g.player = NewPlayer(g)
 	g.space.Add(g.player.playerObj)
@@ -132,6 +146,19 @@ func NewGameScene() *GameScene {
 		panic(err)
 	}
 	g.shieldsUpPlayer = shieldsUpPlayer
+
+	alienLaserPlayer, err := g.audioContext.NewPlayer(assets.AlienLaserSound)
+	if err != nil {
+		panic(err)
+	}
+	g.alienLaserPlayer = alienLaserPlayer
+
+	alienSoundPlayer, err := g.audioContext.NewPlayer(assets.AlienSound)
+	if err != nil {
+		panic(err)
+	}
+	alienSoundPlayer.SetVolume(0.5)
+	g.alienSoundPlayer = alienSoundPlayer
 
 	return g
 }
