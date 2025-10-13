@@ -31,17 +31,16 @@ func NewAlienLaser(position Vector, rotation float64) *AlienLaser {
 	sprite := assets.AlienLaserSprite
 
 	// Center-origin adjustment.
-	b := sprite.Bounds()
-	halfW := float64(b.Dx()) / 2
-	halfH := float64(b.Dy()) / 2
-	position.X -= halfW
-	position.Y -= halfH
-
+	bounds := sprite.Bounds()
+	halfWidth := float64(bounds.Dx()) / 2
+	halfHeight := float64(bounds.Dy()) / 2
+	position.X -= halfWidth
+	position.Y -= halfHeight
 	alienLaser := &AlienLaser{
 		position: position,
 		rotation: rotation,
 		sprite:   sprite,
-		laserObj: resolv.NewRectangle(position.X, position.Y, float64(b.Dx()), float64(b.Dy())),
+		laserObj: resolv.NewRectangle(position.X, position.Y, float64(bounds.Dx()), float64(bounds.Dy())),
 	}
 	alienLaser.laserObj.SetPosition(position.X, position.Y)
 	alienLaser.laserObj.Tags().Set(TagLaser)
@@ -57,20 +56,21 @@ func (al *AlienLaser) Update() {
 
 	// Advance along rotation; X uses sin, Y uses cos for screen coordinates.
 	al.position.X += math.Sin(al.rotation) * speed
-	al.position.Y -= math.Cos(al.rotation) * -speed // matches existing orientation
+	al.position.Y += math.Cos(al.rotation) * -speed
 
 	al.laserObj.SetPosition(al.position.X, al.position.Y)
 }
 
 // Draw renders the laser rotated around its center at its current position.
 func (al *AlienLaser) Draw(screen *ebiten.Image) {
-	b := al.sprite.Bounds()
-	halfW := float64(b.Dx()) / 2
-	halfH := float64(b.Dy()) / 2
+	bounds := al.sprite.Bounds()
+	halfWidth := float64(bounds.Dx()) / 2
+	halfHeight := float64(bounds.Dy()) / 2
 
 	op := &ebiten.DrawImageOptions{}
-	op.GeoM.Translate(-halfW, -halfH)
+	op.GeoM.Translate(-halfWidth, -halfHeight)
 	op.GeoM.Rotate(al.rotation)
+	op.GeoM.Translate(halfWidth, halfHeight)
 	op.GeoM.Translate(al.position.X, al.position.Y)
 
 	screen.DrawImage(al.sprite, op)
