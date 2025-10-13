@@ -1,3 +1,5 @@
+// File helpers.go provides cross-platform helper functions for reading and
+// writing the player’s high score to the local file system.
 package asteroids
 
 import (
@@ -9,14 +11,22 @@ import (
 	"strings"
 )
 
+// getHighScore reads the player's stored high score from a file,
+// creating the directory and file if they do not yet exist.
+//
+// The save path differs per OS:
+//   - macOS:   ~/Library/Application Support/Asteroids
+//   - Windows: C:\Users\<user>\AppData
+//   - Linux:   /users/<user> or /home/<user>/.asteroids
 func getHighScore() (int, error) {
-	// Get the user name
+	// Resolve the current OS user.
 	user, err := user.Current()
 	if err != nil {
 		return 0, err
 	}
 
-	path := ""
+	// Build the appropriate platform path.
+	var path string
 	switch runtime.GOOS {
 	case "darwin":
 		path = fmt.Sprintf("/Users/%s/Library/Application Support/Asteroids", user.Username)
@@ -28,41 +38,45 @@ func getHighScore() (int, error) {
 		path = fmt.Sprintf("/home/%s/.asteroids", user.Username)
 	}
 
+	// Ensure the directory exists.
 	if _, err := os.Stat(path); err != nil {
 		if err := os.Mkdir(path, 0750); err != nil {
 			return 0, err
 		}
 	}
 
-	if _, err := os.Stat(path + "/high-score.txt"); err != nil {
-		err := os.WriteFile(path+"/high-score.txt", []byte("0"), 0750)
-		if err != nil {
+	// Ensure the file exists with a default value.
+	scoreFile := path + "/high-score.txt"
+	if _, err := os.Stat(scoreFile); err != nil {
+		if err := os.WriteFile(scoreFile, []byte("0"), 0750); err != nil {
 			return 0, err
 		}
 	}
 
-	contents, err := os.ReadFile(path + "/high-score.txt")
+	// Read and parse score.
+	data, err := os.ReadFile(scoreFile)
+	if err != nil {
+		return 0, err
+	}
+	s := strings.TrimSpace(string(data))
+	value, err := strconv.Atoi(s)
 	if err != nil {
 		return 0, err
 	}
 
-	score := string(contents)
-	score = strings.TrimSpace(score)
-	s, err := strconv.Atoi(string(score))
-	if err != nil {
-		return 0, err
-	}
-	return s, nil
+	return value, nil
 }
 
+// updateHighScore writes a new integer score value to the user’s
+// high score file, overwriting any previous value.
 func updateHighScore(score int) error {
-	// Get the user name
 	user, err := user.Current()
 	if err != nil {
 		return err
 	}
 
-	path := ""
+	// Construct platform-specific file path.
+	var path string
 	switch runtime.GOOS {
 	case "darwin":
 		path = fmt.Sprintf("/Users/%s/Library/Application Support/Asteroids/high-score.txt", user.Username)
@@ -74,9 +88,6 @@ func updateHighScore(score int) error {
 		path = fmt.Sprintf("/home/%s/.asteroids/high-score.txt", user.Username)
 	}
 
-	s := fmt.Sprintf("%d", score)
-	if err := os.WriteFile(path, []byte(s), 0750); err != nil {
-		return err
-	}
-	return nil
+	// Write integer as plain text.
+	return os.WriteFile(path, []byte(fmt.Sprintf("%d", score)), 0750)
 }

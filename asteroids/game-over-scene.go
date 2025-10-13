@@ -1,3 +1,5 @@
+// File game_over_scene.go implements the GameOverScene, which displays
+// a "GAME OVER" banner with ambient meteors and allows restart or quit.
 package asteroids
 
 import (
@@ -5,83 +7,84 @@ import (
 
 	"github.com/bensabler/asteroids/assets"
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/inpututil"
-	"github.com/hajimehoshi/ebiten/v2/text/v2"
+	inpututil "github.com/hajimehoshi/ebiten/v2/inpututil"
+	text "github.com/hajimehoshi/ebiten/v2/text/v2"
 )
 
+// GameOverScene shows the game-over screen with drifting meteors and stars.
 type GameOverScene struct {
-	game        *GameScene
-	meteors     map[int]*Meteor
-	meteorCount int
-	stars       []*Star
+	game        *GameScene      // The gameplay scene to reset/restart.
+	meteors     map[int]*Meteor // Ambient meteors for background motion.
+	meteorCount int             // Monotonic ID for meteors in this scene.
+	stars       []*Star         // Starfield backdrop.
 }
 
+// Draw renders stars, ambient meteors, the main banner, and a high-score tag.
 func (o *GameOverScene) Draw(screen *ebiten.Image) {
-	// Draw stars
+	// Background stars for continuity with the rest of the game.
 	for _, star := range o.stars {
 		star.Draw(screen)
 	}
 
-	// Draw meteors
+	// Ambient meteors for subtle motion.
 	for _, meteor := range o.meteors {
 		meteor.Draw(screen)
 	}
 
-	textToDraw := "GAME OVER"
-
+	// Centered "GAME OVER" banner.
+	const title = "GAME OVER"
 	op := &text.DrawOptions{
-		LayoutOptions: text.LayoutOptions{
-			PrimaryAlign: text.AlignCenter,
-		},
+		LayoutOptions: text.LayoutOptions{PrimaryAlign: text.AlignCenter},
 	}
 	op.ColorScale.ScaleWithColor(color.White)
 	op.GeoM.Translate(float64(ScreenWidth/2), float64(ScreenHeight/2))
-	text.Draw(screen, textToDraw, &text.GoTextFace{
+	text.Draw(screen, title, &text.GoTextFace{
 		Source: assets.TitleFont,
 		Size:   72,
 	}, op)
 
+	// Congratulate for a new high score, if achieved this run.
 	if o.game.score > originalHighScore {
-		textToDraw = "New High Score!"
+		label := "New High Score!"
 		op := &text.DrawOptions{
-			LayoutOptions: text.LayoutOptions{
-				PrimaryAlign: text.AlignCenter,
-			},
+			LayoutOptions: text.LayoutOptions{PrimaryAlign: text.AlignCenter},
 		}
-		op.ColorScale.ScaleWithColor(color.RGBA{R: 255, G: 215, B: 0, A: 255}) // Gold color
+		op.ColorScale.ScaleWithColor(color.RGBA{R: 255, G: 215, B: 0, A: 255}) // gold-ish
 		op.GeoM.Translate(float64(ScreenWidth/2), float64((ScreenHeight/2)+80))
-		text.Draw(screen, textToDraw, &text.GoTextFace{
+		text.Draw(screen, label, &text.GoTextFace{
 			Source: assets.TitleFont,
 			Size:   48,
 		}, op)
 	}
-
 }
 
+// Update advances ambient effects and handles restart/quit input.
+//
+// Space: reset GameScene and return to play.
+// Q:     request Ebiten termination.
+// Meteors: maintain a small pool for animation.
 func (o *GameOverScene) Update(state *State) error {
-
-	// Spawn meteors
+	// Maintain up to 10 background meteors.
 	if len(o.meteors) < 10 {
 		meteor := NewMeteor(0.25, &GameScene{}, len(o.meteors)-1)
 		o.meteorCount++
 		o.meteors[o.meteorCount] = meteor
 	}
 
-	// Update meteors
+	// Animate ambient meteors.
 	for _, meteor := range o.meteors {
 		meteor.Update()
 	}
 
-	// Check for space key press to restart game
+	// Restart game.
 	if inpututil.IsKeyJustPressed(ebiten.KeySpace) {
 		o.game.Reset()
 		state.SceneManager.GoToScene(o.game)
 		return nil
 	}
 
-	// Check for q key to quit game
+	// Quit application.
 	if inpututil.IsKeyJustPressed(ebiten.KeyQ) {
-		// Quit the game
 		return ebiten.Termination
 	}
 
