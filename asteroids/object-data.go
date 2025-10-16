@@ -1,4 +1,4 @@
-// File object_data.go defines a small wrapper struct used for attaching
+// object_data.go defines a small wrapper struct used for attaching
 // arbitrary metadata to collision objects.
 package asteroids
 

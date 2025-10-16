@@ -1,4 +1,4 @@
-// File collider.go provides collision queries using the resolv library.
+// collider.go provides collision queries using the resolv library.
 // The helper wraps IntersectionTest to support broad-phase queries against
 // nearby cells or a specific target collider.
 package asteroids

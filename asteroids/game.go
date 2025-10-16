@@ -42,10 +42,13 @@ func (g *Game) Update() error {
 		// The TitleScene may use this to display background meteors.
 		meteors := make(map[int]*Meteor)
 
+		// stars holds a collection of stars for the title scene.
+		stars := GenerateStars(numberOfStars)
+
 		// Generate a starfield and transition into the title scene.
 		g.sceneManager.GoToScene(&TitleScene{
 			meteors: meteors,
-			stars:   GenerateStars(numberOfStars),
+			stars:   stars,
 		})
 	}
 
